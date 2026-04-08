@@ -1,6 +1,7 @@
 package com.example.aiapp.controller;
 
-import com.example.aiapp.model.Question;
+import com.example.aiapp.dto.QuestionDTO;
+import com.example.aiapp.dto.AnswerDTO;
 import com.example.aiapp.service.AIService;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,8 +15,14 @@ public class AIController{
     }
 
     @PostMapping("/ask")
-    public String ask(@RequestBody Question question){
-        return aiService.getAnswer(question.text);
+    public AnswerDTO ask(@RequestBody QuestionDTO question){
+        String result = aiService.getAnswer(question.text);
+        return new AnswerDTO(result);
+    }
+
+    @GetMapping("/history")
+    public Object history(){
+        return aiService.getHistory();
     }
 }
 
