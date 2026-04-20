@@ -19,4 +19,3 @@ public class AIController{
         return new AnswerDTO(aiService.getAnswer(question.text));
     }
 }
-

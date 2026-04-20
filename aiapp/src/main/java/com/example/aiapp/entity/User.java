@@ -15,7 +15,6 @@ public class User{
 
     public User() {
     }
-
     public User(String name, String groupName){
         this.name = name;
         this.groupName = groupName;
