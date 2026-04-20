@@ -3,6 +3,7 @@ package com.example.aiapp.service;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.*;
@@ -16,6 +17,9 @@ public class HuggingFaceService {
     private final RestTemplate restTemplate = new RestTemplate();
 
     public String askAI(String prompt) {
+        if (apiKey == null || apiKey.isBlank() || "YOUR_API_KEY".equals(apiKey)) {
+            return fallbackResponse(prompt);
+        }
 
         String url = "https://router.huggingface.co/hf-inference/models/HuggingFaceH4/zephyr-7b-beta";
 
@@ -34,20 +38,30 @@ public class HuggingFaceService {
 
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
         
-        ResponseEntity<List> response = restTemplate.exchange(
-                url,
-                HttpMethod.POST,
-                request,
-                List.class
-        );
+        try {
+            ResponseEntity<List> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.POST,
+                    request,
+                    List.class
+            );
 
-        List result = response.getBody();
+            List result = response.getBody();
 
-        if (result != null && !result.isEmpty()) {
-            Map first = (Map) result.get(0);
-            return first.get("generated_text").toString();
+            if (result != null && !result.isEmpty()) {
+                Map first = (Map) result.get(0);
+                return first.get("generated_text").toString();
+            }
+        } catch (RestClientResponseException ex) {
+            return fallbackResponse(prompt);
+        } catch (RuntimeException ex) {
+            return fallbackResponse(prompt);
         }
 
-        return "AI error";
+        return fallbackResponse(prompt);
+    }
+
+    private String fallbackResponse(String prompt) {
+        return "AI service is unavailable now. Prompt received: " + prompt;
     }
 }
