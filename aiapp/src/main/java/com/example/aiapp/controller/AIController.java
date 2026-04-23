@@ -16,8 +16,8 @@ import com.example.aiapp.service.AIService;
 import com.example.aiapp.service.OllamaService;
 
 /**
- * AI Controller - Handles Q&A requests
- * Supports multiple AI providers (Ollama, HuggingFace)
+ * AI Controller - Handles Q&A requests via Ollama
+ * Local LLM inference - no external API required
  */
 @RestController
 @RequestMapping("/api")
@@ -31,7 +31,7 @@ public class AIController {
     }
 
     /**
-     * Ask AI a question
+     * Ask AI a question (using Ollama)
      */
     @PostMapping("/ask")
     public AnswerDTO ask(@RequestBody QuestionDTO question) {
@@ -39,33 +39,19 @@ public class AIController {
     }
 
     /**
-     * Get current AI provider and model info
+     * Get Ollama model info
      */
-    @GetMapping("/ai/provider")
-    public ResponseEntity<Map<String, Object>> getProviderInfo() {
+    @GetMapping("/ai/model")
+    public ResponseEntity<Map<String, Object>> getModelInfo() {
         Map<String, Object> info = new LinkedHashMap<>();
-        info.put("provider", aiService.getCurrentProvider());
+        info.put("provider", "ollama");
         info.put("model", ollamaService.getCurrentModel());
         info.put("status", "active");
         return ResponseEntity.ok(info);
     }
 
     /**
-     * Switch AI provider (ollama or huggingface)
-     */
-    @PostMapping("/ai/provider")
-    public ResponseEntity<Map<String, String>> switchProvider(@RequestBody Map<String, String> request) {
-        String provider = request.get("provider");
-        aiService.setAIProvider(provider);
-        
-        Map<String, String> response = new LinkedHashMap<>();
-        response.put("message", "Provider switched to: " + provider);
-        response.put("provider", aiService.getCurrentProvider());
-        return ResponseEntity.ok(response);
-    }
-
-    /**
-     * Set Ollama model
+     * Set Ollama model for inference
      */
     @PostMapping("/ai/model")
     public ResponseEntity<Map<String, String>> setModel(@RequestBody Map<String, String> request) {
