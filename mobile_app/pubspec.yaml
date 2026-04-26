@@ -11,6 +11,10 @@ dependencies:
   flutter:
     sdk: flutter
   
+  flutter_tts: ^4.1.0
+
+  shared_preferences: ^2.5.0
+  
   # UI
   cupertino_icons: ^1.0.8
   

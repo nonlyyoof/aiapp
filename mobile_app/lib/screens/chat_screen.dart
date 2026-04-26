@@ -6,6 +6,8 @@ import '../services/ai_service.dart';
 import '../services/ml_service.dart';
 import '../models/message.dart';
 import 'camera_screen.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:html' as html;
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -150,8 +152,20 @@ class _ChatScreenState extends State<ChatScreen> {
     return prompt;
   }
 
+
   void _startListening() async {
-    bool available = await _speech.initialize();
+  // Для Web используем Web Speech API
+    if (kIsWeb) {
+      _startWebSpeech();
+      return;
+    }
+  
+  // Для Android/iOS
+    bool available = await _speech.initialize(
+      onStatus: (status) => print('Status: $status'),
+      onError: (error) => print('Error: $error'),
+    );
+  
     if (available) {
       setState(() => _isListening = true);
       _speech.listen(
@@ -162,9 +176,57 @@ class _ChatScreenState extends State<ChatScreen> {
           });
           _sendTextMessage(_controller.text);
         },
-        onDevice: true,
+        listenFor: const Duration(seconds: 10),
+        pauseFor: const Duration(seconds: 2),
+        partialResults: true,
+        localeId: 'ru_RU',
       );
+    } else {
+      _showSpeechError();
     }
+  }
+
+// Для Web используем Web Speech API
+  void _startWebSpeech() {
+  // @dart=2.9
+  // ignore: undefined_prefixed_name
+    final webSpeech = html.window.navigator;
+  // ignore: undefined_prefixed_name
+    if (webSpeech != null && webSpeech is html.WindowNavigator) {
+    // ignore: undefined_prefixed_name
+      final SpeechRecognition? speechRecognition = webSpeech.webkitSpeechRecognition;
+      if (speechRecognition != null) {
+        speechRecognition.lang = 'ru-RU';
+        speechRecognition.interimResults = true;
+        speechRecognition.maxAlternatives = 1;
+      
+        speechRecognition.onResult = (event) {
+          final transcript = event.results[0][0].transcript;
+          setState(() {
+            _controller.text = transcript;
+          });
+          _sendTextMessage(transcript);
+        };
+      
+        speechRecognition.onError = (event) {
+          print('Speech error: $event');
+          _showSpeechError();
+        };
+      
+        speechRecognition.start();
+        setState(() => _isListening = true);
+      } else {
+        _showSpeechError();
+      }
+    } else {
+      _showSpeechError();
+    }
+  }
+
+  void _showSpeechError() {
+    ScaffoldMessenger.of(context).showSnackBar(
+     const SnackBar(content: Text('Голосовой ввод не поддерживается в этом браузере')),
+    );
   }
 
   Future<void> _openCamera() async {
