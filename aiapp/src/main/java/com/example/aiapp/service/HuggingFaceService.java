@@ -1,0 +1,72 @@
+package com.example.aiapp.service;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestClientResponseException;
+import org.springframework.web.client.RestTemplate;
+
+// @Service
+public class HuggingFaceService {
+
+    @Value("${hf.api.key}")
+    private String apiKey;
+
+    private final RestTemplate restTemplate = new RestTemplate();
+
+    public String askAI(String prompt) {
+        if (apiKey == null || apiKey.isBlank() || "YOUR_API_KEY".equals(apiKey)) {
+            return fallbackResponse(prompt);
+        }
+
+        String url = "https://router.huggingface.co/hf-inference/models/HuggingFaceH4/zephyr-7b-beta";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(apiKey);
+
+        Map<String, Object> message = new HashMap<>();
+        message.put("role", "user");
+        message.put("content", prompt);
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("model", "HuggingFaceH4/zephyr-7b-beta");
+        body.put("inputs", prompt);
+        body.put("max_tokens", 500);
+
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
+        
+        try {
+            ResponseEntity<List> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.POST,
+                    request,
+                    List.class
+            );
+
+            List result = response.getBody();
+
+            if (result != null && !result.isEmpty()) {
+                Map first = (Map) result.get(0);
+                return first.get("generated_text").toString();
+            }
+        } catch (RestClientResponseException ex) {
+            return fallbackResponse(prompt);
+        } catch (RuntimeException ex) {
+            return fallbackResponse(prompt);
+        }
+
+        return fallbackResponse(prompt);
+    }
+
+    private String fallbackResponse(String prompt) {
+        return "AI service is unavailable now. Prompt received: " + prompt;
+    }
+}
