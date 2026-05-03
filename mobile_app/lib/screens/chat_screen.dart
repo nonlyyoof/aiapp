@@ -192,7 +192,7 @@ class _ChatScreenState extends State<ChatScreen> {
   // ignore: undefined_prefixed_name
     final webSpeech = html.window.navigator;
   // ignore: undefined_prefixed_name
-    if (webSpeech != null && webSpeech is html.WindowNavigator) {
+    if (webSpeech is html.WindowNavigator) {
     // ignore: undefined_prefixed_name
       final SpeechRecognition? speechRecognition = webSpeech.webkitSpeechRecognition;
       if (speechRecognition != null) {

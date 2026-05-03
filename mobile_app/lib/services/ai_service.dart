@@ -40,7 +40,7 @@ class AIService {
     
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/student/${_currentStudentId}/schedule/current'),
+        Uri.parse('$baseUrl/student/$_currentStudentId/schedule/current'),
       );
       
       if (response.statusCode == 200) {
@@ -57,7 +57,7 @@ class AIService {
     
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/student/${_currentStudentId}/schedule/next'),
+        Uri.parse('$baseUrl/student/$_currentStudentId/schedule/next'),
       );
       
       if (response.statusCode == 200) {
