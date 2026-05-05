@@ -6,41 +6,42 @@ class AIService {
   static const String baseUrl = 'http://127.0.0.1:8080/api';
   
   int? _currentStudentId;
+  String? _studentName;
+  String? _groupName;
   
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
     _currentStudentId = prefs.getInt('studentId');
+    _studentName = prefs.getString('studentName');
+    _groupName = prefs.getString('groupName');
   }
   
-  Future<void> setStudentId(int id) async {
+  Future<void> setStudentId(int id, String name, String group) async {
     _currentStudentId = id;
+    _studentName = name;
+    _groupName = group;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('studentId', id);
+    await prefs.setString('studentName', name);
+    await prefs.setString('groupName', group);
   }
   
-  Future<Map<String, dynamic>> recognizeStudentByFace(String faceEncoding) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/student/recognize'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'faceEncoding': faceEncoding}),
-      );
-      
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
-      }
-    } catch (e) {
-      print('Recognition error: $e');
+  Future<String> getStudentName() async {
+    if (_studentName == null) {
+      final prefs = await SharedPreferences.getInstance();
+      _studentName = prefs.getString('studentName');
     }
-    return {'success': false, 'message': 'Ошибка распознавания'};
+    return _studentName ?? 'Студент';
   }
   
   Future<Map<String, dynamic>> getCurrentLesson() async {
-    if (_currentStudentId == null) return {'hasLesson': false, 'message': 'Студент не идентифицирован'};
+    if (_currentStudentId == null) {
+      return {'hasLesson': false, 'message': 'Студент не идентифицирован'};
+    }
     
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/student/$_currentStudentId/schedule/current'),
+        Uri.parse('$baseUrl/student/${_currentStudentId}/schedule/current'),
       );
       
       if (response.statusCode == 200) {
@@ -53,11 +54,13 @@ class AIService {
   }
   
   Future<Map<String, dynamic>> getNextLesson() async {
-    if (_currentStudentId == null) return {'hasNext': false, 'message': 'Студент не идентифицирован'};
+    if (_currentStudentId == null) {
+      return {'hasNext': false, 'message': 'Студент не идентифицирован'};
+    }
     
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/student/$_currentStudentId/schedule/next'),
+        Uri.parse('$baseUrl/student/${_currentStudentId}/schedule/next'),
       );
       
       if (response.statusCode == 200) {
@@ -71,21 +74,32 @@ class AIService {
   
   Future<String> askQuestion(String question) async {
     try {
-      // Добавляем контекст студента и расписания
+      // Получаем контекст расписания
       String context = '';
-      if (_currentStudentId != null) {
-        final currentLesson = await getCurrentLesson();
-        if (currentLesson['hasLesson'] == true) {
-          context += 'Сейчас у студента пара: ${currentLesson['subject']} в аудитории ${currentLesson['room']}. ';
-        } else {
-          final nextLesson = await getNextLesson();
-          if (nextLesson['hasNext'] == true) {
-            context += 'Следующая пара у студента: ${nextLesson['subject']} в ${nextLesson['startTime']} в аудитории ${nextLesson['room']}. ';
-          }
-        }
+      
+      final currentLesson = await getCurrentLesson();
+      if (currentLesson['hasLesson'] == true) {
+        context += 'Сейчас у студента пара: ${currentLesson['subject']} в аудитории ${currentLesson['room']}. ';
       }
       
-      final fullQuestion = context.isNotEmpty ? '$context\n\nВопрос студента: $question' : question;
+      final nextLesson = await getNextLesson();
+      if (nextLesson['hasNext'] == true) {
+        context += 'Следующая пара: ${nextLesson['subject']} в ${nextLesson['startTime']} в аудитории ${nextLesson['room']}. ';
+      }
+      
+      // Если спросили про расписание
+      bool isScheduleQuestion = question.toLowerCase().contains('пара') ||
+                                question.toLowerCase().contains('расписание') ||
+                                question.toLowerCase().contains('урок') ||
+                                question.toLowerCase().contains('занятие') ||
+                                question.toLowerCase().contains('аудитор');
+      
+      String fullQuestion;
+      if (isScheduleQuestion && context.isNotEmpty) {
+        fullQuestion = 'Контекст расписания: $context\n\nВопрос студента: $question\n\nОтветь, используя контекст расписания.';
+      } else {
+        fullQuestion = question;
+      }
       
       final response = await http.post(
         Uri.parse('$baseUrl/ask'),
